@@ -100,7 +100,7 @@ def initialize_permanent_values(temp_grid, grid_colors):
                         temp_grid[r][c] = 0 
                         permanent_zeros.add((r, c))  
                         updated = True  
-        
+
         # Check rows for exclusive color dominance
         for r in range(rows):
             if any(temp_grid[r][c] == 1 for c in range(cols)):  # Skip rows with a queen
@@ -113,25 +113,65 @@ def initialize_permanent_values(temp_grid, grid_colors):
                 for x in range(rows):
                     for y in range(cols):
                         if grid_colors[x][y] == exclusive_color and x != r and temp_grid[x][y] is None:
-                            temp_grid[x][y] = 0 # Set all cells of that color that are not in this row to 0
+                            temp_grid[x][y] = 0
                             permanent_zeros.add((x, y))
                             updated = True
 
-        # Check columns for exclusive color dominance (all blank cells in a row/ column are of one colour = block all cells of this color that are outside this row/ column)
+                # Block the directly above and below cells if dominance is done with 2 cells (they would block these 2 cells and we know a queens MUST be there)
+                blank_cells = [(r, c) for c in range(cols) if temp_grid[r][c] is None and grid_colors[r][c] == exclusive_color]
+                if all(blank_cells[i][1] + 1 == blank_cells[i + 1][1] for i in range(len(blank_cells) - 1)): # checks if the blanks are next to each other
+                    if len(blank_cells) == 2:  # If exactly 2 cells are blank (and next to each other)
+                        for cell in blank_cells:
+                            r_cell, c_cell = cell
+                            for dr in [-1, 1]:
+                                nr = r_cell + dr
+                                if 0 <= nr < rows:
+                                    temp_grid[nr][c_cell] = 0
+                                    permanent_zeros.add((nr, c_cell))
+                    elif len(blank_cells) == 3:  # If exactly 3 cells are blank
+                        middle = blank_cells[1]  # The middle cell
+                        middle_row, middle_col = middle
+                        for dr in [-1, 1]:
+                            nr = middle_row + dr
+                            if 0 <= nr < rows:
+                                temp_grid[nr][middle_col] = 0
+                                permanent_zeros.add((nr, middle_col))
+
+        # Color Dominance for cols
         for c in range(cols):
             if any(temp_grid[r][c] == 1 for r in range(rows)):  # Skip columns with a queen
                 continue
 
             col_colors = [grid_colors[r][c] for r in range(rows) if temp_grid[r][c] is None]
             unique_colors = set(col_colors)
-            if len(unique_colors) == 1 and col_colors:  # All blanks in the column are of one color
+            if len(unique_colors) == 1 and col_colors: 
                 exclusive_color = unique_colors.pop()
                 for x in range(rows):
                     for y in range(cols):
                         if grid_colors[x][y] == exclusive_color and y != c and temp_grid[x][y] is None:
-                            temp_grid[x][y] = 0 # Set all cells of that color that are not in this column to 0
+                            temp_grid[x][y] = 0
                             permanent_zeros.add((x, y))
                             updated = True
+
+                # Same logic just that for colums here we block the left and right cells (instead of above and below)
+                blank_cells = [(r, c) for r in range(rows) if temp_grid[r][c] is None and grid_colors[r][c] == exclusive_color]
+                if all(blank_cells[i][0] + 1 == blank_cells[i + 1][0] for i in range(len(blank_cells) - 1)):
+                    if len(blank_cells) == 2:  
+                        for cell in blank_cells:
+                            r_cell, c_cell = cell
+                            for dc in [-1, 1]:
+                                nc = c_cell + dc
+                                if 0 <= nc < cols:
+                                    temp_grid[r_cell][nc] = 0
+                                    permanent_zeros.add((r_cell, nc))
+                    elif len(blank_cells) == 3:  
+                        middle = blank_cells[1]  # The middle cell
+                        middle_row, middle_col = middle
+                        for dc in [-1, 1]:
+                            nc = middle_col + dc
+                            if 0 <= nc < cols:
+                                temp_grid[middle_row][nc] = 0
+                                permanent_zeros.add((middle_row, nc))
 
         # Check for color confinements (if all blank cells of a color are within a row/ column, the queen for this r/c MUST be of that color = block all other colors in this r/c)
         # This applies to all adject r/c (if 2 colors are confined within 2 rows, we can block all other colors in these 2 rows)
